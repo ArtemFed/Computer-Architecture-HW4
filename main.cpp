@@ -14,6 +14,24 @@ using namespace std;
 #define BUYERS_NUM 3
 #define COUNT 3
 
+string ANSI_RESET = "\033[0m";
+string ANSI_BLACK = "\033[30m";
+string ANSI_RED = "\033[31m";
+string ANSI_GREEN = "\033[32m";
+string ANSI_YELLOW = "\033[33m";
+string ANSI_BLUE = "\033[34m";
+string ANSI_PURPLE = "\033[35m";
+string ANSI_CYAN = "\033[36m";
+
+string func(string str, int id) {
+    if (id == 0) {
+        return ANSI_YELLOW + str + ANSI_RESET;
+    } else if (id == 1) {
+        return ANSI_GREEN + str + ANSI_RESET;
+    }
+    return ANSI_CYAN + str + ANSI_RESET;
+}
+
 /**
  * Класс продавца
  */
@@ -42,7 +60,7 @@ vector<Buyer *> buf(SECTIONS_NUM);
 
 bool flag = true;
 
-unsigned int seed = 101;// инициализатор генератора случайных чисел
+unsigned int seed = 102;// инициализатор генератора случайных чисел
 
 pthread_mutex_t mutex;// мьютекс для условных переменных
 
@@ -58,59 +76,58 @@ void *SellerFunc(void *param) {
             continue;
         }
 
-        cout << "\nSeller: " + to_string(seller.id) + " IS serving for Buyer: " + to_string(buf[seller.id]->id) + " \tclock: " + to_string((clock()));
+        cout << func("\nSeller: " + to_string(seller.id) + " IS serving for Buyer: " + to_string(buf[seller.id]->id) + " \t\tclock: " + to_string((clock())), seller.id);
 
         sleep(2);
 
-        cout << "\nSeller: " + to_string(seller.id) + " ENDED serving for Buyer: " + to_string(buf[seller.id]->id) + " \tclock: " + to_string((clock()));
+        cout << func("\nSeller: " + to_string(seller.id) + " ENDED serving for Buyer: " + to_string(buf[seller.id]->id) + " \t\tclock: " + to_string((clock())), seller.id);
 
         buf[seller.id] = nullptr;
 
         // Разбудить потоки-читатели после обновления элемента буфера
-        pthread_cond_broadcast(&section_empty);
+//        pthread_cond_broadcast(&section_empty);
     }
-    cout << "\nSeller: " + to_string(seller.id) + " ended successfully... " + " \tclock: " + to_string((clock()));
+    cout << func("\nSeller: " + to_string(seller.id) + " ended successfully... " + " \t\tclock: " + to_string((clock())), seller.id);
     return nullptr;
 }
 
 // Стартовая функция потоков – покупателей (читателей)
 void *BuyerFunc(void *param) {
-    Buyer buyer = *((Buyer *) param);
-    while (!buyer.plan.empty()) {
+    Buyer *buyer = ((Buyer *) param);
+    while (!buyer->plan.empty()) {
         // Извлечь элемент из буфера
 
-        cout << "\nBuyer: " + to_string(buyer.id) + " moved in line to the Seller: " + to_string(buyer.plan.front()) + " \tclock: " + to_string(clock());
+        cout << func("\nBuyer: " + to_string(buyer->id) + " moved in line to the Seller: " + to_string(buyer->plan.front()) + " \tclock: " + to_string(clock()), buyer->plan.front());
+
+        sleep(1);
 
         // Заснуть, если нужный сектор в магазине занят
-        while (buf[buyer.plan.front()] != nullptr) {
-            cout << "\n" << buyer.id << " ";
-            pthread_cond_wait(&section_empty, &mutex);
+        while (buf[buyer->plan.front()] != nullptr) {
         }
 
         // Защита операции чтения
         pthread_mutex_lock(&mutex);
 
-        //sleep(1);
-
-        //        cout << "\n" << buyer.id << " lock";
-        buf[buyer.plan.front()] = new Buyer(buyer);
+        buf[buyer->plan.front()] = buyer;
 
         // Заснуть, если нужный сектор в магазине занят
-        while (buf[buyer.plan.front()] != nullptr) {
-            pthread_cond_wait(&section_empty, &mutex);
+        while (buf[buyer->plan.front()] != nullptr) {
+//            pthread_cond_wait(&section_empty, &mutex);
         }
 
-        buyer.plan.pop();
+        buyer->plan.pop();
 
         // Конец критической секции
         pthread_mutex_unlock(&mutex);
-        //        cout << "\n" << buyer.id << " unlock";
     }
-    cout << "\nBuyer: " + to_string(buyer.id) + " went away..." + " \t\t\tclock: " + to_string(clock());
+    cout << "\nBuyer: " + to_string(buyer->id) + " went away..." + " \t\t\t\tclock: " + to_string(clock());
     return nullptr;
 }
 
 int main() {
+    system("color 00");
+    cout << ANSI_CYAN << "HELLO" << ANSI_RESET;
+
     std::vector<Seller> sellers(SECTIONS_NUM);
     std::vector<pthread_t> threads_sellers(sellers.size());
 
@@ -133,7 +150,7 @@ int main() {
         pthread_create(&threads_sellers[i], nullptr,
                        SellerFunc,
                        &sellers[i]);
-        cout << "\nSeller: " << sellers[i].id << " came to work";
+        cout << func("\nSeller: " + to_string(sellers[i].id) + " came to work", i);
     }
 
     // Запуск покупателей
@@ -170,6 +187,6 @@ int main() {
         pthread_join(threads_seller, nullptr);
     }
 
-    std::cout << "\nThe store is closed!";
+    std::cout << "\n\nThe store is closed!";
     return 0;
 }
