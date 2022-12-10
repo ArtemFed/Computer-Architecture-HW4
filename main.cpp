@@ -14,6 +14,7 @@
 using namespace std;
 
 // COLORS == 1, то "Разные цвета есть", иначе "Цвета стандартные".
+// ЕСЛИ ЦВЕТА НЕ РАБОТАЮТ И ВЫВОДЯТСЯ ТОЛЬКО КОДЫ => поменять COLORS == 0
 #define COLORS 1
 #define SECTIONS_NUM 3
 
@@ -40,9 +41,6 @@ string str;
 // Накопительная переменная для вывода в файл
 string cumulative;
 
-// Работа с файлами
-string input, output;
-
 // Мьютекс для защиты операции чтения
 pthread_mutex_t mutex;
 
@@ -67,6 +65,9 @@ public:
    */
     static string getColor(const string &line, int id) {
 #if COLORS == 1
+        if (answer == "2"){
+            return line;
+        }
         switch (id) {
             case 0:
                 return ANSI_YELLOW + line + ANSI_RESET;
@@ -154,8 +155,6 @@ void *SellerFunc(void *param) {
 void *BuyerFunc(void *param) {
     string str_thread;
     Buyer *buyer = ((Buyer *) param);
-    // Случайное время ожидания потока, чтобы они немного "разошлись") от 50 мс до 150 мс
-    usleep(50 + (rand() % 100) * 1000);
     while (!buyer->plan.empty()) {
         str_thread = Seller::getColor(
                 "\nBuyer: " + to_string(buyer->id + 1) + " moved in line to the Seller: " +
@@ -209,6 +208,9 @@ int main() {
     // Сид генератора случайных чисел и просто числа
     int seed, num, val;
 
+    // Работа с файлами
+    string input, output;
+
     str = "Select the input/output format:\n"
           " 1. Input from the console.\n"
           " 2. Input from a file.\n"
@@ -254,18 +256,27 @@ int main() {
             buyers[i].plan = plan;
         }
     } else if (answer == "2") {
-        cout << "\nEnter the name of INPUT file:";
+        cout << "Enter the name of INPUT file:";
         cin >> input;
-        cout << "\nEnter the name of OUTPUT file:";
+        cout << "Enter the name of OUTPUT file:";
         cin >> output;
-        ifstream in(input);
+        // Поток файла ввода
+        ifstream in(R"(..\)" + input);
+        if (!in.is_open()) {
+            cout << "Error on opening" << endl;
+            return 0;
+        }
         in >> num;
+        buyers = vector<Buyer>(num);
+        threads_buyers = vector<pthread_t>(buyers.size());
         for (int i = 0; i < buyers.size(); ++i) {
             buyers[i].id = i;
+            // Количество деталей плана
+            in >> num;
             queue<int> plan;
             for (int j = 0; j < num; ++j) {
                 in >> val;
-                plan.push(val % SECTIONS_NUM);
+                plan.push(max(0, val - 1) % SECTIONS_NUM);
             }
             buyers[i].plan = plan;
         }
@@ -321,6 +332,7 @@ int main() {
         cumulative += str;
         cout << str;
     }
+    cout << "\n";
 
     // Запускаем потоки покупателей
     for (int i = 0; i < buyers.size(); ++i) {
@@ -337,6 +349,8 @@ int main() {
     // Завершаем работу продавцов
     flag = false;
 
+    cout << "\n";
+
     // Ждём пока закроются все отделы
     for (unsigned long long threads_seller: threads_sellers) {
         pthread_join(threads_seller, nullptr);
@@ -347,7 +361,11 @@ int main() {
     cout << str;
 
     if (answer == "2") {
-        ofstream out(output);
+        ofstream out(R"(..\)" + output);
+        if (!out.is_open()) {
+            cout << "Error on opening" << endl;
+            return 0;
+        }
         out << cumulative;
     }
 
