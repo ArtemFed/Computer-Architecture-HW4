@@ -21,10 +21,8 @@ using namespace std;
 #if COLORS == 1
 // Набор цветов для консоли.
 string ANSI_RESET = "\033[0m";
-string ANSI_RED = "\033[31m";
 string ANSI_GREEN = "\033[32m";
 string ANSI_YELLOW = "\033[33m";
-string ANSI_BLUE = "\033[34m";
 string ANSI_PURPLE = "\033[35m";
 string ANSI_CYAN = "\033[36m";
 #endif
@@ -166,8 +164,6 @@ void *BuyerFunc(void *param) {
         // Покупатель идёт в отдел
         sleep(1);
 
-        // Заснуть, если продавец в нужном отделе занят
-
         // Защита операции чтения
         pthread_mutex_lock(&mutex);
 
@@ -231,7 +227,7 @@ int main() {
     pthread_mutex_init(&mutex, nullptr);
 
     if (answer == "1") {
-        cout << "Enter count of Buyer:";
+        cout << "Enter count of Buyers:";
         cin >> num;
         buyers = vector<Buyer>(num);
         threads_buyers = vector<pthread_t>(buyers.size());
@@ -261,7 +257,7 @@ int main() {
         cout << "Enter the name of OUTPUT file:";
         cin >> output;
         // Поток файла ввода
-        ifstream in(R"(..\)" + input);
+        ifstream in(input);
         if (!in.is_open()) {
             cout << "Error on opening" << endl;
             return 0;
@@ -361,7 +357,7 @@ int main() {
     cout << str;
 
     if (answer == "2") {
-        ofstream out(R"(..\)" + output);
+        ofstream out(output);
         if (!out.is_open()) {
             cout << "Error on opening" << endl;
             return 0;
