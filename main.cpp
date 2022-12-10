@@ -1,9 +1,12 @@
+// Отключаем некоторые warning'и, потому что бесят
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "cert-msc50-cpp"
+#pragma ide diagnostic ignored "cert-err58-cpp"
+
 #include <fstream>
 #include <iostream>
 #include <pthread.h>
 #include <queue>
-#include <random>
-#include <semaphore.h>
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -13,8 +16,6 @@ using namespace std;
 // COLORS == 1, то "Разные цвета есть", иначе "Цвета стандартные".
 #define COLORS 1
 #define SECTIONS_NUM 3
-#define BUYERS_NUM 3
-#define COUNT 3
 
 #if COLORS == 1
 // Набор цветов для консоли.
@@ -27,125 +28,141 @@ string ANSI_PURPLE = "\033[35m";
 string ANSI_CYAN = "\033[36m";
 #endif
 
+// Пока покупатели не кончились, работодатели пашут
+bool flag = true;
+
+// Режим ввода
+string answer;
+
+// Строка для вывода
+string str;
+
+// Накопительная переменная для вывода в файл
+string cumulative;
+
+// Работа с файлами
+string input, output;
+
+// Мьютекс для защиты операции чтения
+pthread_mutex_t mutex;
+
 /*
  *Класс продавца
-*/
+ */
 class Seller {
 public:
-    int id;
+    int id{};
 
-    Seller() {}
+    Seller() = default;
 
     // Раскрасить вывод Seller
     /**
-     * 1 - Yello
-     * 2 - Green
-     * 3 - Cyan
-     * 4 - Purple
-     * @param str Строка
-     * @param id Код цвета
-     * @return Раскришенный Цвет
-     */
-    static string getColor(const string &str, int id) {
+   * 0 - Yellow
+   * 1 - Green
+   * 2 - Cyan
+   * 3 - Purple
+   * @param line Строка
+   * @param id Код цвета
+   * @return Раскрашенный Цвет
+   */
+    static string getColor(const string &line, int id) {
 #if COLORS == 1
         switch (id) {
+            case 0:
+                return ANSI_YELLOW + line + ANSI_RESET;
             case 1:
-                return ANSI_YELLOW + str + ANSI_RESET;
+                return ANSI_GREEN + line + ANSI_RESET;
             case 2:
-                return ANSI_GREEN + str + ANSI_RESET;
+                return ANSI_CYAN + line + ANSI_RESET;
             case 3:
-                return ANSI_CYAN + str + ANSI_RESET;
-            case 4:
-                return ANSI_PURPLE + str + ANSI_RESET;
+                return ANSI_PURPLE + line + ANSI_RESET;
             default:
-                return str;
+                return line;
         }
 #else
-        return str;
+        return line;
 #endif
     }
 };
 
 /*
  * Класс покупателя
-*/
+ */
 class Buyer {
 public:
     int id{};
 
     queue<int> plan;
+
     Buyer() = default;
 
-    string getPlanToString() const {
+    [[nodiscard]] string getPlanToString() const {
+        string line;
         queue<int> plan_copy(plan);
-        string str;
         for (int j = 0; j < plan.size(); ++j) {
-            str += " " + to_string(plan_copy.front());
+            line += " " + to_string(plan_copy.front() + 1);
             plan_copy.pop();
         }
-        return str;
+        return line;
     }
 };
 
 // Вектор активных к обслуживанию покупателей (индекс = отдел)
 vector<Buyer *> active_buyers(SECTIONS_NUM);
 
-// Пока покупатели не кончились, работодатели пашут
-bool flag = true;
-
-// Мьютекс для защиты операции чтения
-pthread_mutex_t mutex;
-
-pthread_cond_t section_empty;
-unsigned int microseconds;
 // Стартовая функция потоков – продавцов (писателей)
 void *SellerFunc(void *param) {
+    string str_thread;
     Seller seller = *((Seller *) param);
     // Пока покупатели не кончились, работодатели пашут
     while (flag) {
-        // Ждём пока не появится покупатель
-        if (active_buyers[seller.id - 1] == nullptr) {
-            usleep(200 * 1000);
+        // Ждём пока не появится покупатель, чтобы не было null reference (не зависит от других потоков-продавцов)
+        if (active_buyers[seller.id] == nullptr) {
             continue;
         }
 
-        cout << Seller::getColor("\nSeller: " + to_string(seller.id) +
-                                         " IS serving for Buyer: " +
-                                         to_string(active_buyers[seller.id - 1]->id) +
-                                         " \t\tclock: " + to_string((clock())),
-                                 seller.id);
-
+        str_thread = Seller::getColor("\nSeller: " + to_string(seller.id + 1) +
+                                      " IS serving for Buyer: " +
+                                      to_string(active_buyers[seller.id]->id + 1) +
+                                      " \t\tclock: " + to_string((clock())),
+                                      seller.id);
+        cumulative += str_thread;
+        cout << str_thread;
         // Обслуживает покупателя
         sleep(2);
 
-        cout << Seller::getColor("\nSeller: " + to_string(seller.id) +
-                                         " ENDED serving for Buyer: " +
-                                         to_string(active_buyers[seller.id - 1]->id) +
-                                         " \t\tclock: " + to_string((clock())),
-                                 seller.id);
+        str_thread = Seller::getColor("\nSeller: " + to_string(seller.id + 1) +
+                                      " ENDED serving for Buyer: " +
+                                      to_string(active_buyers[seller.id]->id + 1) +
+                                      " \t\tclock: " + to_string((clock())),
+                                      seller.id);
+        cumulative += str_thread;
+        cout << str_thread;
 
-        active_buyers[seller.id - 1] = nullptr;
-
-        // Разбудить потоки-читатели после обновления элемента буфера
-        // pthread_cond_broadcast(&section_empty);
+        active_buyers[seller.id] = nullptr;
     }
-    cout << Seller::getColor("\nSeller: " + to_string(seller.id) +
-                                     " ended successfully... " +
-                                     " \t\tclock: " + to_string((clock())),
-                             seller.id);
+    str_thread = Seller::getColor("\nSeller: " + to_string(seller.id + 1) +
+                                  " ended successfully... " +
+                                  " \t\tclock: " + to_string((clock())),
+                                  seller.id);
+    cumulative += str_thread;
+    cout << str_thread;
     return nullptr;
 }
 
 // Стартовая функция потоков – покупателей (читателей)
 void *BuyerFunc(void *param) {
+    string str_thread;
     Buyer *buyer = ((Buyer *) param);
+    // Случайное время ожидания потока, чтобы они немного "разошлись") от 50 мс до 150 мс
+    usleep(50 + (rand() % 100) * 1000);
     while (!buyer->plan.empty()) {
-        // Извлечь элемент из буфера
-
-        cout << Seller::getColor(
-                "\nBuyer: " + to_string(buyer->id) + " moved in line to the Seller: " +
-                        to_string(buyer->plan.front()) + " \tclock: " + to_string(clock()),
-                buyer->plan.front() + 1);
+        str_thread = Seller::getColor(
+                "\nBuyer: " + to_string(buyer->id + 1) + " moved in line to the Seller: " +
+                to_string(buyer->plan.front() + 1) + " \tclock: " + to_string(clock()),
+                buyer->plan.front());
+        cumulative += str_thread;
+        cout << str_thread;
 
         // Покупатель идёт в отдел
         sleep(1);
@@ -166,12 +183,14 @@ void *BuyerFunc(void *param) {
         // Конец критической секции
         pthread_mutex_unlock(&mutex);
     }
-    cout << "\nBuyer: " + to_string(buyer->id) + " went away..." +
-                    " \t\t\t\tclock: " + to_string(clock());
+    str_thread = "\nBuyer: " + to_string(buyer->id + 1) + " went away..." +
+                 " \t\t\t\tclock: " + to_string(clock());
+    cumulative += str_thread;
+    cout << str_thread;
     return nullptr;
 }
 
-int main(int argc, char **argv) {
+int main() {
     /*
    * Условие:
    * 10. Задача о магазине - 1.
@@ -184,19 +203,18 @@ int main(int argc, char **argv) {
    */
 
     // Ввод с консоли на 6
-    // Ввод.Вывод с/из файла на 7
+    // Ввод/Вывод с/из файла на 7
     // Генератор на 8
 
-    // Сид генератора случайных чисел
+    // Сид генератора случайных чисел и просто числа
     int seed, num, val;
-    string answer, str;
 
-    cout << "Select the input/output format:\n"
-            " 1. Input from the console.\n"
-            " 2. Input from a file.\n"
-            " 3. Random input.\n"
-            "Input:";
-
+    str = "Select the input/output format:\n"
+          " 1. Input from the console.\n"
+          " 2. Input from a file.\n"
+          " 3. Random input.\n"
+          "Input:";
+    cout << str;
     cin >> answer;
 
     // Список продавцов
@@ -204,40 +222,70 @@ int main(int argc, char **argv) {
     std::vector<pthread_t> threads_sellers(sellers.size());
 
     // Список покупателей
-    std::vector<Buyer> buyers(BUYERS_NUM);
-    std::vector<pthread_t> threads_buyers(buyers.size());
+    std::vector<Buyer> buyers;
+    std::vector<pthread_t> threads_buyers;
 
-    // Инициализация мутексов и семафоров
+    // Инициализация mutex
     pthread_mutex_init(&mutex, nullptr);
-    pthread_cond_init(&section_empty, nullptr);
 
     if (answer == "1") {
+        cout << "Enter count of Buyer:";
+        cin >> num;
+        buyers = vector<Buyer>(num);
+        threads_buyers = vector<pthread_t>(buyers.size());
         // Создаём покупателей (дома готовят план покупок)
         for (int i = 0; i < buyers.size(); ++i) {
-            buyers[i].id = i + 1;
+            buyers[i].id = i;
             // Создаём план для покупателя по полученным данным из консоли
-            cout << "Buyer \" << i + 1";
-            cout << "\nEnter the number of tasks for";
+            cout << "Buyer: " + to_string(i + 1);
+            cout << "\nEnter the number of tasks:";
             cin >> num;
+            if (num < 1) {
+                continue;
+            }
             queue<int> plan;
-            str = "\nEnter " + to_string(num) + " numbers separated by a space (from " +
-                  to_string(0) + " to " + to_string(SECTIONS_NUM) + "): ";
+            str = "Enter " + to_string(num) + " numbers separated by a space (from " +
+                  to_string(1) + " to " + to_string(SECTIONS_NUM) + "):";
             cout << str;
             for (int j = 0; j < num; ++j) {
                 cin >> val;
+                plan.push(max(0, val - 1) % SECTIONS_NUM);
+            }
+            buyers[i].plan = plan;
+        }
+    } else if (answer == "2") {
+        cout << "\nEnter the name of INPUT file:";
+        cin >> input;
+        cout << "\nEnter the name of OUTPUT file:";
+        cin >> output;
+        ifstream in(input);
+        in >> num;
+        for (int i = 0; i < buyers.size(); ++i) {
+            buyers[i].id = i;
+            queue<int> plan;
+            for (int j = 0; j < num; ++j) {
+                in >> val;
                 plan.push(val % SECTIONS_NUM);
             }
             buyers[i].plan = plan;
         }
-    } else if (answer == "3") {
+        in.close();
+    } else {
+        int max_count;
+        cout << "Enter the number of Buyers:";
+        cin >> num;
+        buyers = vector<Buyer>(num);
+        threads_buyers = vector<pthread_t>(buyers.size());
+        cout << "Enter the MAX number of tasks for each Buyer (>0):";
+        cin >> max_count;
         cout << "Enter a seed for random generation:";
         cin >> seed;
         srand(seed);
         // Создаём покупателей (дома готовят план покупок)
         for (int i = 0; i < buyers.size(); ++i) {
-            buyers[i].id = i + 1;
+            buyers[i].id = i;
             // Создаём случайный план для покупателя
-            num = 1 + rand() % COUNT;
+            num = 1 + rand() % max(1, max_count);
             queue<int> plan;
             for (int j = 0; j < num; ++j) {
                 val = rand() % SECTIONS_NUM;
@@ -247,24 +295,30 @@ int main(int argc, char **argv) {
         }
     }
 
+#if COLORS == 1
     system("color 00");
-    std::cout << Seller::getColor("\nThe store is opening!\n\n", 3);
+#endif
+    str = Seller::getColor("\nThe store is opening!\n\n", 3);
+    cumulative += str;
+    cout << str;
 
     // Запуск продавцов (по одному в каждом отделе) По условию 3 отдела
     for (int i = 0; i < sellers.size(); i++) {
         // Зададим id для продавца
-        sellers[i].id = i + 1;
+        sellers[i].id = i;
         // Запускаем поток
         pthread_create(&threads_sellers[i], nullptr, SellerFunc, &sellers[i]);
         str = Seller::getColor(
-                "\nSeller: " + to_string(sellers[i].id) + " " + "came to" + " work", i);
+                "\nSeller: " + to_string(sellers[i].id + 1) + " " + "came to" + " work", i);
+        cumulative += str;
         cout << str;
     }
 
     // Информация о покупателях
-    for (auto &buyer : buyers) {
-        str = "\nBuyer: " + to_string(buyer.id) +
+    for (auto &buyer: buyers) {
+        str = "\nBuyer: " + to_string(buyer.id + 1) +
               " has prepared a plan:" + buyer.getPlanToString();
+        cumulative += str;
         cout << str;
     }
 
@@ -276,17 +330,28 @@ int main(int argc, char **argv) {
     // Тут параллельно происходит взаимодействие продавцов и покупателей
 
     // Ждём пока кончатся все покупатели
-    for (unsigned long long threads_buyer : threads_buyers) {
+    for (unsigned long long threads_buyer: threads_buyers) {
         pthread_join(threads_buyer, nullptr);
     }
 
     // Завершаем работу продавцов
     flag = false;
+
     // Ждём пока закроются все отделы
-    for (unsigned long long threads_seller : threads_sellers) {
+    for (unsigned long long threads_seller: threads_sellers) {
         pthread_join(threads_seller, nullptr);
     }
 
-    std::cout << Seller::getColor("\n\nThe store is closed!", 3);
+    str = Seller::getColor("\n\nThe store is closed!", 3);
+    cumulative += str;
+    cout << str;
+
+    if (answer == "2") {
+        ofstream out(output);
+        out << cumulative;
+    }
+
     return 0;
 }
+
+#pragma clang diagnostic pop
