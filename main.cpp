@@ -21,6 +21,7 @@ using namespace std;
 #if COLORS == 1
 // Набор цветов для консоли.
 string ANSI_RESET = "\033[0m";
+string ANSI_RED = "\033[31m";
 string ANSI_GREEN = "\033[32m";
 string ANSI_YELLOW = "\033[33m";
 string ANSI_PURPLE = "\033[35m";
@@ -40,7 +41,9 @@ string str;
 string cumulative;
 
 // Мьютекс для защиты операции чтения
-pthread_mutex_t mutex;
+pthread_mutex_t mutex_0;
+pthread_mutex_t mutex_1;
+pthread_mutex_t mutex_2;
 
 /*
  *Класс продавца
@@ -63,7 +66,7 @@ public:
    */
     static string getColor(const string &line, int id) {
 #if COLORS == 1
-        if (answer == "2"){
+        if (answer == "2") {
             return line;
         }
         switch (id) {
@@ -75,6 +78,8 @@ public:
                 return ANSI_CYAN + line + ANSI_RESET;
             case 3:
                 return ANSI_PURPLE + line + ANSI_RESET;
+            case 4:
+                return ANSI_RED + line + ANSI_RESET;
             default:
                 return line;
         }
@@ -164,8 +169,20 @@ void *BuyerFunc(void *param) {
         // Покупатель идёт в отдел
         sleep(1);
 
+        switch (buyer->plan.front()) {
+            case 0:
+                pthread_mutex_lock(&mutex_0);
+                break;
+            case 1:
+                pthread_mutex_lock(&mutex_1);
+                break;
+            case 2:
+                pthread_mutex_lock(&mutex_2);
+                break;
+            default:
+                cout << Seller::getColor("\nPROBLEM on lock!", 4);
+        }
         // Защита операции чтения
-        pthread_mutex_lock(&mutex);
 
         active_buyers[buyer->plan.front()] = buyer;
 
@@ -174,9 +191,22 @@ void *BuyerFunc(void *param) {
             usleep(200 * 1000);
         }
 
-        buyer->plan.pop();
         // Конец критической секции
-        pthread_mutex_unlock(&mutex);
+        switch (buyer->plan.front()) {
+            case 0:
+                pthread_mutex_unlock(&mutex_0);
+                break;
+            case 1:
+                pthread_mutex_unlock(&mutex_1);
+                break;
+            case 2:
+                pthread_mutex_unlock(&mutex_2);
+                break;
+            default:
+                cout << Seller::getColor("\nPROBLEM on unlock!", 4);
+        }
+        buyer->plan.pop();
+
     }
     str_thread = "\nBuyer: " + to_string(buyer->id + 1) + " went away..." +
                  " \t\t\t\tclock: " + to_string(clock());
@@ -224,7 +254,9 @@ int main() {
     std::vector<pthread_t> threads_buyers;
 
     // Инициализация mutex
-    pthread_mutex_init(&mutex, nullptr);
+    pthread_mutex_init(&mutex_0, nullptr);
+    pthread_mutex_init(&mutex_1, nullptr);
+    pthread_mutex_init(&mutex_2, nullptr);
 
     if (answer == "1") {
         cout << "Enter count of Buyers:";
