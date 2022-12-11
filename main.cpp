@@ -10,6 +10,7 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
+#include <thread>
 
 using namespace std;
 
@@ -157,7 +158,14 @@ void *SellerFunc(void *param) {
 // Стартовая функция потоков – покупателей (читателей)
 void *BuyerFunc(void *param) {
     string str_thread;
+    // Покупатель засыпает на случайное время (не все же приходят к открытию)
+    int a = rand() % 10;
+    sleep(a);
     Buyer *buyer = ((Buyer *) param);
+    str_thread = "\n" + to_string(a) + " Buyer: " + to_string(buyer->id + 1) + " come to the Store." +
+                 " \t\t\tclock: " + to_string(clock());
+    cumulative += str_thread;
+    cout << str_thread;
     while (!buyer->plan.empty()) {
         str_thread = Seller::getColor(
                 "\nBuyer: " + to_string(buyer->id + 1) + " moved in line to the Seller: " +
@@ -169,6 +177,7 @@ void *BuyerFunc(void *param) {
         // Покупатель идёт в отдел
         sleep(1);
 
+        // Формирование очереди + защита операции чтения
         switch (buyer->plan.front()) {
             case 0:
                 pthread_mutex_lock(&mutex_0);
@@ -182,8 +191,8 @@ void *BuyerFunc(void *param) {
             default:
                 cout << Seller::getColor("\nPROBLEM on locking!", 4);
         }
-        // Защита операции чтения
 
+        // Занимаем место у кассы, тем самым подаём "сигнал" продавцу
         active_buyers[buyer->plan.front()] = buyer;
 
         // Заснуть, если нужный сектор в магазине занят
@@ -191,7 +200,7 @@ void *BuyerFunc(void *param) {
             usleep(200 * 1000);
         }
 
-        // Конец критической секции
+        // Пропускаем следующего из очереди + конец критической секции
         switch (buyer->plan.front()) {
             case 0:
                 pthread_mutex_unlock(&mutex_0);
@@ -205,8 +214,8 @@ void *BuyerFunc(void *param) {
             default:
                 cout << Seller::getColor("\nPROBLEM on unlocking!", 4);
         }
+        // Отойдя от кассы, удаляем пункт из плана
         buyer->plan.pop();
-
     }
     str_thread = "\nBuyer: " + to_string(buyer->id + 1) + " went away..." +
                  " \t\t\t\tclock: " + to_string(clock());
@@ -215,35 +224,36 @@ void *BuyerFunc(void *param) {
     return nullptr;
 }
 
-int main() {
-    /*
-   * Условие:
-   * 10. Задача о магазине - 1.
-   * В магазине работают три отдела, каждый отдел обслуживает один продавец.
-   * Покупатель, зайдя в магазин, делает покупки в одном или нескольких
-   * произвольных отделах, обходя их в произвольном порядке. Если в выбранном
-   * отделе продавец не свободен, покупатель становится в очередь и засыпает,
-   * пока продавец не освободится. Создать многопоточное приложение,
-   * моделирующее рабочий день магазина.
-   */
-
-    // Ввод с консоли на 6
-    // Ввод/Вывод с/из файла на 7
-    // Генератор на 8
-
+int startTheStore(int argc, char **argv) {
     // Сид генератора случайных чисел и просто числа
-    int seed, num, val;
+    int seed, num, val, max_count;
 
     // Работа с файлами
     string input, output;
 
-    str = "Select the input/output format:\n"
-          " 1. Input from the console.\n"
-          " 2. Input from a file.\n"
-          " 3. Random input.\n"
-          "Input:";
-    cout << str;
-    cin >> answer;
+    answer = "0";
+    // argc == 2   =>   input.txt output.txt
+    // argc == 3   =>   number_of_Buyers MAX_number_of_tasks seed
+    if (argc == 2) {
+        answer = "2";
+        input = argv[0];
+        output = argv[1];
+    } else if (argc == 3) {
+        answer = "3";
+        num = stoi(argv[0]);
+        max_count = stoi(argv[1]);
+        seed = stoi(argv[2]);
+    }
+
+    if (answer == "0") {
+        str = "Select the input/output format:\n"
+              " 1. Input from the console.\n"
+              " 2. Input from a file.\n"
+              " 3. Random input.\n"
+              "Input:";
+        cout << str;
+        cin >> answer;
+    }
 
     // Список продавцов
     std::vector<Seller> sellers(SECTIONS_NUM);
@@ -259,6 +269,7 @@ int main() {
     pthread_mutex_init(&mutex_2, nullptr);
 
     if (answer == "1") {
+        // Ручной ввод в консоль.
         cout << "Enter count of Buyers:";
         cin >> num;
         buyers = vector<Buyer>(num);
@@ -284,15 +295,18 @@ int main() {
             buyers[i].plan = plan;
         }
     } else if (answer == "2") {
-        cout << "Enter the name of INPUT file:";
-        cin >> input;
-        cout << "Enter the name of OUTPUT file:";
-        cin >> output;
+        if (argc != 2) {
+            // Ввод с помощью файла.
+            cout << "Enter the name of INPUT file:";
+            cin >> input;
+            cout << "Enter the name of OUTPUT file:";
+            cin >> output;
+        }
         // Поток файла ввода
         ifstream in(input);
         if (!in.is_open()) {
             cout << "Error on opening" << endl;
-            return 0;
+            return 1;
         }
         in >> num;
         buyers = vector<Buyer>(num);
@@ -310,7 +324,7 @@ int main() {
         }
         in.close();
     } else {
-        int max_count;
+        // Случайная генерация.
         cout << "Enter the number of Buyers:";
         cin >> num;
         buyers = vector<Buyer>(num);
@@ -398,6 +412,25 @@ int main() {
     }
 
     return 0;
+}
+
+int main(int argc, char **argv) {
+    /*
+   * Условие:
+   * 10. Задача о магазине - 1.
+   * В магазине работают три отдела, каждый отдел обслуживает один продавец.
+   * Покупатель, зайдя в магазин, делает покупки в одном или нескольких
+   * произвольных отделах, обходя их в произвольном порядке. Если в выбранном
+   * отделе продавец не свободен, покупатель становится в очередь и засыпает,
+   * пока продавец не освободится. Создать многопоточное приложение,
+   * моделирующее рабочий день магазина.
+   */
+    try {
+        return startTheStore(argc, argv);
+    } catch (const std::exception) {
+        cout << "Проблема... Магазин сгорел и вынужден закрыться... Извините за предоставленные неудобства)";
+        return 1;
+    }
 }
 
 #pragma clang diagnostic pop
