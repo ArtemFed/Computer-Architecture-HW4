@@ -232,17 +232,17 @@ int startTheStore(int argc, char **argv) {
     string input, output;
 
     answer = "0";
-    // argc == 2   =>   input.txt output.txt
-    // argc == 3   =>   number_of_Buyers MAX_number_of_tasks seed
-    if (argc == 2) {
+    // argc == 3   =>   input.txt output.txt
+    // argc == 4   =>   number_of_Buyers MAX_number_of_tasks seed
+    if (argc == 3) {
         answer = "2";
-        input = argv[0];
-        output = argv[1];
-    } else if (argc == 3) {
+        input = argv[1];
+        output = argv[2];
+    } else if (argc == 4) {
         answer = "3";
-        num = stoi(argv[0]);
-        max_count = stoi(argv[1]);
-        seed = stoi(argv[2]);
+        num = stoi(argv[1]);
+        max_count = stoi(argv[2]);
+        seed = stoi(argv[3]);
     }
 
     if (answer == "0") {
@@ -295,7 +295,7 @@ int startTheStore(int argc, char **argv) {
             buyers[i].plan = plan;
         }
     } else if (answer == "2") {
-        if (argc != 2) {
+        if (argc != 3) {
             // Ввод с помощью файла.
             cout << "Enter the name of INPUT file:";
             cin >> input;
@@ -325,14 +325,16 @@ int startTheStore(int argc, char **argv) {
         in.close();
     } else {
         // Случайная генерация.
-        cout << "Enter the number of Buyers:";
-        cin >> num;
+        if (argc != 4) {
+            cout << "Enter the number of Buyers:";
+            cin >> num;
+            cout << "Enter the MAX number of tasks for each Buyer (>0):";
+            cin >> max_count;
+            cout << "Enter a seed for random generation:";
+            cin >> seed;
+        }
         buyers = vector<Buyer>(num);
         threads_buyers = vector<pthread_t>(buyers.size());
-        cout << "Enter the MAX number of tasks for each Buyer (>0):";
-        cin >> max_count;
-        cout << "Enter a seed for random generation:";
-        cin >> seed;
         srand(seed);
         // Создаём покупателей (дома готовят план покупок)
         for (int i = 0; i < buyers.size(); ++i) {
@@ -426,9 +428,16 @@ int main(int argc, char **argv) {
    * моделирующее рабочий день магазина.
    */
     try {
-        return startTheStore(argc, argv);
-    } catch (const std::exception) {
-        cout << "Проблема... Магазин сгорел и вынужден закрыться... Извините за предоставленные неудобства)";
+        int res = startTheStore(argc, argv);
+        if (res == 1) {
+            return 1;
+        }
+        cout << "\nEnter anything to end program:";
+        cin >> str;
+        return 0;
+    } catch (const std::exception &exception) {
+        cout << "\nProblem... The store burned down and had to close... "
+                "Sorry for the inconvenience provided." << endl;
         return 1;
     }
 }
