@@ -10,7 +10,6 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
-#include <thread>
 
 using namespace std;
 
@@ -415,6 +414,10 @@ int startTheStore(int argc, char **argv) {
         }
         out << cumulative;
     }
+
+    pthread_mutex_destroy(&mutex_0);
+    pthread_mutex_destroy(&mutex_1);
+    pthread_mutex_destroy(&mutex_2);
 
     return 0;
 }
