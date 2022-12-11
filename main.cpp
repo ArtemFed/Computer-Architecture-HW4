@@ -180,7 +180,7 @@ void *BuyerFunc(void *param) {
                 pthread_mutex_lock(&mutex_2);
                 break;
             default:
-                cout << Seller::getColor("\nPROBLEM on lock!", 4);
+                cout << Seller::getColor("\nPROBLEM on locking!", 4);
         }
         // Защита операции чтения
 
@@ -203,7 +203,7 @@ void *BuyerFunc(void *param) {
                 pthread_mutex_unlock(&mutex_2);
                 break;
             default:
-                cout << Seller::getColor("\nPROBLEM on unlock!", 4);
+                cout << Seller::getColor("\nPROBLEM on unlocking!", 4);
         }
         buyer->plan.pop();
 
