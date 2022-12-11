@@ -68,6 +68,8 @@ __Заметка 3:__
 
 > [Фотографии некоторых тестов](https://github.com/ArtemFed/Computer-Architecture-HW4/blob/main/files/Readme.md)
 
+__Заметка 5:__
+Программа тестировалась на Windows в CLion и вам советую :)
 
 # Отчёт 4 балла:
 ### 1. Приведено решение задачи на C++:
