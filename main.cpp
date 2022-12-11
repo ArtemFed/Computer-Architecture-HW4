@@ -1,119 +1,9 @@
-// Отключаем некоторые warning'и, потому что бесят
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "cert-msc50-cpp"
-#pragma ide diagnostic ignored "cert-err58-cpp"
-
-#include <fstream>
-#include <iostream>
-#include <pthread.h>
-#include <queue>
-#include <string>
-#include <unistd.h>
-#include <vector>
-
-using namespace std;
-
-// COLORS == 1, то "Разные цвета есть", иначе "Цвета стандартные".
-// ЕСЛИ ЦВЕТА НЕ РАБОТАЮТ И ВЫВОДЯТСЯ ТОЛЬКО КОДЫ => поменять COLORS == 0
-#define COLORS 1
-#define SECTIONS_NUM 3
-
-#if COLORS == 1
-// Набор цветов для консоли.
-string ANSI_RESET = "\033[0m";
-string ANSI_RED = "\033[31m";
-string ANSI_GREEN = "\033[32m";
-string ANSI_YELLOW = "\033[33m";
-string ANSI_PURPLE = "\033[35m";
-string ANSI_CYAN = "\033[36m";
-#endif
-
-// Пока покупатели не кончились, работодатели пашут
-bool flag = true;
-
-// Режим ввода
-string answer;
-
-// Строка для вывода
-string str;
-
-// Накопительная переменная для вывода в файл
-string cumulative;
-
-// Мьютекс для защиты операции чтения
-pthread_mutex_t mutex_0;
-pthread_mutex_t mutex_1;
-pthread_mutex_t mutex_2;
-
-/*
- *Класс продавца
- */
-class Seller {
-public:
-    int id{};
-
-    Seller() = default;
-
-    // Раскрасить вывод Seller
-    /**
-   * 0 - Yellow
-   * 1 - Green
-   * 2 - Cyan
-   * 3 - Purple
-   * @param line Строка
-   * @param id Код цвета
-   * @return Раскрашенный Цвет
-   */
-    static string getColor(const string &line, int id) {
-#if COLORS == 1
-        if (answer == "2") {
-            return line;
-        }
-        switch (id) {
-            case 0:
-                return ANSI_YELLOW + line + ANSI_RESET;
-            case 1:
-                return ANSI_GREEN + line + ANSI_RESET;
-            case 2:
-                return ANSI_CYAN + line + ANSI_RESET;
-            case 3:
-                return ANSI_PURPLE + line + ANSI_RESET;
-            case 4:
-                return ANSI_RED + line + ANSI_RESET;
-            default:
-                return line;
-        }
-#else
-        return line;
-#endif
-    }
-};
-
-/*
- * Класс покупателя
- */
-class Buyer {
-public:
-    int id{};
-    int time_start{};
-
-    queue<int> plan;
-
-    Buyer() = default;
-
-    [[nodiscard]] string getPlanToString() const {
-        string line;
-        queue<int> plan_copy(plan);
-        for (int j = 0; j < plan.size(); ++j) {
-            line += " " + to_string(plan_copy.front() + 1);
-            plan_copy.pop();
-        }
-        return line;
-    }
-};
+#include "main.h"
+#include "Seller.cpp"
+#include "Buyer.cpp"
 
 // Вектор активных к обслуживанию покупателей (индекс = отдел)
-vector<Buyer *> active_buyers(SECTIONS_NUM);
+vector<Buyer *> active_buyers;
 
 // Стартовая функция потоков – продавцов (писателей)
 void *SellerFunc(void *param) {
@@ -260,6 +150,9 @@ int startTheStore(int argc, char **argv) {
     // Список продавцов
     std::vector<Seller> sellers(SECTIONS_NUM);
     std::vector<pthread_t> threads_sellers(sellers.size());
+
+    // Список активных покупателей
+    active_buyers = vector<Buyer *>(SECTIONS_NUM);
 
     // Список покупателей
     std::vector<Buyer> buyers;
