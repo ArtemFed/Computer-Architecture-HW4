@@ -1,0 +1,70 @@
+
+The store is opening!
+
+
+Seller: 1 came to work
+Seller: 2 came to work
+Seller: 3 came to work
+Buyer: 1 has prepared a plan: 1
+Buyer: 2 has prepared a plan: 1
+Buyer: 3 has prepared a plan: 1
+Buyer: 4 has prepared a plan: 1
+Buyer: 5 has prepared a plan: 1
+Buyer: 6 has prepared a plan: 2
+Buyer: 7 has prepared a plan: 2
+Buyer: 8 has prepared a plan: 2
+Buyer: 9 has prepared a plan: 2
+Buyer: 10 has prepared a plan: 3
+Buyer: 8 come to the Store. 			clock: 9771
+Buyer: 8 moved in line to the Seller: 2 	clock: 9771
+Buyer: 2 come to the Store. 			clock: 10774
+Seller: 2 IS serving for Buyer: 8 		clock: 10774
+Buyer: 2 moved in line to the Seller: 1 	clock: 10774
+Buyer: 6 come to the Store. 			clock: 11785
+Seller: 1 IS serving for Buyer: 2 		clock: 11785
+Buyer: 6 moved in line to the Seller: 2 	clock: 11785
+Buyer: 5 come to the Store. 			clock: 12776
+Seller: 2 ENDED serving for Buyer: 8 		clock: 12776
+Buyer: 5 moved in line to the Seller: 1 	clock: 12776
+Seller: 2 IS serving for Buyer: 6 		clock: 12807
+Seller: 1 ENDED serving for Buyer: 2 		clock: 13795
+Seller: 1 IS serving for Buyer: 5 		clock: 13811
+Buyer: 2 went away... 				clock: 13811
+Seller: 2 ENDED serving for Buyer: 6 		clock: 14823
+Buyer: 6 went away... 				clock: 14839
+Buyer: 10 come to the Store. 			clock: 15774
+Buyer: 3 come to the Store. 			clock: 15774
+Buyer: 10 moved in line to the Seller: 3 	clock: 15775
+Buyer: 3 moved in line to the Seller: 1 	clock: 15775
+Seller: 1 ENDED serving for Buyer: 5 		clock: 15822
+Buyer: 5 went away... 				clock: 15838
+Seller: 1 IS serving for Buyer: 3 		clock: 16791
+Seller: 3 IS serving for Buyer: 10 		clock: 16791
+Seller: 1 ENDED serving for Buyer: 3 		clock: 18795
+Seller: 3 ENDED serving for Buyer: 10 		clock: 18795
+Buyer: 3 went away... 				clock: 18826
+Buyer: 10 went away... 				clock: 18826
+Buyer: 9 come to the Store. 			clock: 21783
+Buyer: 7 come to the Store. 			clock: 21783
+Buyer: 9 moved in line to the Seller: 2 	clock: 21783
+Buyer: 4 moved in line to the Seller: 1 	clock: 21783
+Buyer: 7 moved in line to the Seller: 2 	clock: 21784
+Buyer: 1 come to the Store. 			clock: 22780
+Buyer: 1 moved in line to the Seller: 1 	clock: 22780
+Seller: 1 IS serving for Buyer: 4 		clock: 22796
+Seller: 2 IS serving for Buyer: 9 		clock: 22796
+Seller: 2 ENDED serving for Buyer: 9 		clock: 24808
+Seller: 1 ENDED serving for Buyer: 4 		clock: 24808
+Buyer: 9 went away... 				clock: 24824
+Buyer: 4 went away... 				clock: 24824
+Seller: 1 IS serving for Buyer: 1 		clock: 24824
+Seller: 2 IS serving for Buyer: 7 		clock: 24824
+Seller: 1 ENDED serving for Buyer: 1 		clock: 26837
+Seller: 2 ENDED serving for Buyer: 7 		clock: 26837
+Buyer: 1 went away... 				clock: 26853
+Buyer: 7 went away... 				clock: 26853
+Seller: 1 ended successfully...  		clock: 26853
+Seller: 3 ended successfully...  		clock: 26853
+Seller: 2 ended successfully...  		clock: 26853
+
+The store is closed!
