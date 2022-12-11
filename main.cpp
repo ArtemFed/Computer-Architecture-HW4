@@ -96,6 +96,7 @@ public:
 class Buyer {
 public:
     int id{};
+    int time_start{};
 
     queue<int> plan;
 
@@ -157,12 +158,11 @@ void *SellerFunc(void *param) {
 
 // Стартовая функция потоков – покупателей (читателей)
 void *BuyerFunc(void *param) {
+    Buyer *buyer = ((Buyer *) param);
     string str_thread;
     // Покупатель засыпает на случайное время (не все же приходят к открытию)
-    int a = rand() % 10;
-    sleep(a);
-    Buyer *buyer = ((Buyer *) param);
-    str_thread = "\n" + to_string(a) + " Buyer: " + to_string(buyer->id + 1) + " come to the Store." +
+    sleep(buyer->time_start);
+    str_thread = "\nBuyer: " + to_string(buyer->id + 1) + " come to the Store." +
                  " \t\t\tclock: " + to_string(clock());
     cumulative += str_thread;
     cout << str_thread;
@@ -370,9 +370,12 @@ int startTheStore(int argc, char **argv) {
     }
 
     // Информация о покупателях
-    for (auto &buyer: buyers) {
-        str = "\nBuyer: " + to_string(buyer.id + 1) +
-              " has prepared a plan:" + buyer.getPlanToString();
+    for (int i = 0; i < buyers.size(); ++i) {
+        buyers[i].id = i;
+        // Случайное время, когда покупатель придёт в магазин
+        buyers[i].time_start = rand() % 14;
+        str = "\nBuyer: " + to_string(buyers[i].id + 1) +
+              " has prepared a plan:" + buyers[i].getPlanToString();
         cumulative += str;
         cout << str;
     }
@@ -419,13 +422,16 @@ int startTheStore(int argc, char **argv) {
 int main(int argc, char **argv) {
     /*
    * Условие:
-   * 10. Задача о магазине - 1.
+     *
+   * Вариант 10. Задача о магазине - 1. Федоров Артём
+     *
    * В магазине работают три отдела, каждый отдел обслуживает один продавец.
    * Покупатель, зайдя в магазин, делает покупки в одном или нескольких
    * произвольных отделах, обходя их в произвольном порядке. Если в выбранном
    * отделе продавец не свободен, покупатель становится в очередь и засыпает,
    * пока продавец не освободится. Создать многопоточное приложение,
    * моделирующее рабочий день магазина.
+     *
    */
     try {
         int res = startTheStore(argc, argv);
