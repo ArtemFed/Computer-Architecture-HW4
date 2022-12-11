@@ -194,7 +194,10 @@ void *BuyerFunc(void *param) {
         // Занимаем место у кассы, тем самым подаём "сигнал" продавцу
         active_buyers[buyer->plan.front()] = buyer;
 
-        // Заснуть, если нужный сектор в магазине занят
+        // Покупатель разговаривает с продавцом
+        sleep(1);
+
+        // Заснуть пока продавец не закончит обрабатывать покупателя
         while (active_buyers[buyer->plan.front()] != nullptr) {
             usleep(200 * 1000);
         }
@@ -450,5 +453,3 @@ int main(int argc, char **argv) {
         return 1;
     }
 }
-
-#pragma clang diagnostic pop
